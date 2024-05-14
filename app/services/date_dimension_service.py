@@ -9,7 +9,20 @@ class DateDimensionService(object):
     def __init__(self, holiday_service):
         self.holiday_service = holiday_service
 
-    def get_for_date(self, date: datetime) -> DateDimension:
+    def get_for_date(self, date: datetime) -> list[DateDimension]:
+        """
+        根据给定的完整日期时间返回0~23小时的DateDimension对象列表
+        :param date: 完整的日期时间，datetime对象
+        :return: DateDimension列表
+        """
+        date_dimensions = []
+        for hour in range(24):
+            date_hour = date.replace(hour=hour)
+            date_dimensions.append(self.__get_for_date_hour(date_hour))
+
+        return date_dimensions
+
+    def __get_for_date_hour(self, date: datetime) -> DateDimension:
         """
         根据给定的完整日期时间返回一个DateDimension对象
         :param date: 完整的日期时间，datetime对象
@@ -118,7 +131,7 @@ class DateDimensionService(object):
         date_dimensions = []
         for date in iter_days(time_start, time_end):
             date_dimension = self.get_for_date(date)
-            date_dimensions.append(date_dimension)
+            date_dimensions.extend(date_dimension)
 
         return date_dimensions
 
