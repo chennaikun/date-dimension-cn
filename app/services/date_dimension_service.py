@@ -129,16 +129,14 @@ class DateDimensionService(object):
         List[DateDimension] - 日期范围内每个日期对应的DateDimension对象列表。
         """
         date_dimensions = []
-        for date in iter_days(time_start, time_end):
+        for date in self.__iter_days(time_start, time_end):
             date_dimension = self.get_for_date(date)
             date_dimensions.extend(date_dimension)
 
         return date_dimensions
 
-
-# 辅助函数，用于生成指定日期范围内的所有日期
-def iter_days(
-    start_date: datetime.date, end_date: datetime.date
-) -> Iterator[datetime.date]:
-    for n in range((end_date - start_date).days + 1):
-        yield start_date + timedelta(days=n)
+    def __iter_days(
+        self, start_date: datetime.date, end_date: datetime.date
+    ) -> Iterator[datetime.date]:
+        for n in range((end_date - start_date).days + 1):
+            yield start_date + timedelta(days=n)
