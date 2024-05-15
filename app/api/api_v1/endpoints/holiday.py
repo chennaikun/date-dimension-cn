@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -11,12 +11,14 @@ from app.controllers.holiday_controller import (
 holiday_router = APIRouter()
 
 
-@holiday_router.post("/holiday")
+@holiday_router.post("/")
 async def get_for_date(
-    date: datetime,
+    date: date,
     controller: HolidayController = Depends(holiday_controller),
 ) -> Holiday:
-    holiday = controller.get_for_date(date)
+    holiday = controller.get_for_date(
+        datetime.combine(date, datetime.min.time())
+    )
 
     if holiday is None:
         raise HTTPException(status_code=404, detail="Holiday not found")

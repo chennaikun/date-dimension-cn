@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, date
 import io
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from csv import writer
 
 from app.controllers.date_dimension_controller import (
@@ -13,46 +13,52 @@ from app.schemas.date_dimension import DateDimension
 
 date_dimension_router = APIRouter()
 
+# @date_dimension_router.post("/date-dimension")
+# async def get_for_date(
+#     date: date,
+# ) -> DateDimension:
+#     try:
+#         controller: DateDimensionController = date_dimension_controller(date)
+#         return controller.get_for_date(date)
+#     except FileNotFoundError as e:
+#         raise HTTPException(status_code=404, detail=str(e))
 
-@date_dimension_router.post("/date-dimension")
-async def get_for_date(
-    date: datetime,
-) -> DateDimension:
-    try:
-        controller: DateDimensionController = date_dimension_controller(date)
-        return controller.get_for_date(date)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
-
-@date_dimension_router.post("/date-dimension")
-async def get_ste_day(
-    start_date: datetime,
-    end_date: datetime,
+@date_dimension_router.get("/")
+def get_ste_day(
+    start_date: date,
+    end_date: date,
     controller: DateDimensionController = Depends(date_dimension_controller),
 ) -> list[DateDimension] | None:
     try:
-        return controller.get_ste_day(start_date, end_date)
+        return controller.get_ste_day(
+            datetime.combine(start_date, datetime.min.time()),
+            datetime.combine(end_date, datetime.min.time()),
+        )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@date_dimension_router.post("/date-dimension/csv", response_class=FileResponse)
-async def export_to_csv(
-    start_date: datetime,
-    end_date: datetime,
-) -> FileResponse:
+@date_dimension_router.get("/csv", response_class=StreamingResponse)
+def export_to_csv(
+    start_date: date,
+    end_date: date,
+    controller: DateDimensionController = Depends(date_dimension_controller),
+) -> StreamingResponse:
     try:
-        csv_data = get_ste_day(start_date, end_date)
+        csv_data = get_ste_day(
+            datetime.combine(start_date, datetime.min.time()),
+            datetime.combine(end_date, datetime.min.time()),
+            controller,
+        )
+        csv_response = __generate_csv(csv_data)
+
+        return csv_response
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    return __generate_csv(
-        content=csv_data, media_type="text/csv", filename="export.csv"
-    )
 
-
-def __generate_csv(data: list[DateDimension]) -> FileResponse:
+def __generate_csv(data: list[DateDimension]) -> StreamingResponse:
     """
     生成CSV内容并返回FastAPI的Response对象。
     """
@@ -61,7 +67,7 @@ def __generate_csv(data: list[DateDimension]) -> FileResponse:
 
     # 动态获取属性名作为表头
     field_names = [
-        field.name for field in DateDimension._model_fields.values()
+        field_name for field_name in DateDimension.model_fields.keys()
     ]
     csv_writer.writerow(field_names)
     # 写入数据
@@ -72,10 +78,10 @@ def __generate_csv(data: list[DateDimension]) -> FileResponse:
         )
 
     # 获取CSV字符串并设置响应头
-    return FileResponse(
+    return StreamingResponse(
         content=stream.getvalue(),
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=stored_days.csv"
+            "Content-Disposition": "attachment; filename=date-dimension.csv"
         },
     )

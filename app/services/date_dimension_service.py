@@ -1,12 +1,15 @@
 from typing import Iterator, Optional
 from datetime import datetime, timedelta
+import pendulum
+from loguru import logger
 
 from app.schemas.date_dimension import DateDimension
 from app.schemas.holiday import Holiday
+from app.services.holiday_service import HolidayService
 
 
 class DateDimensionService(object):
-    def __init__(self, holiday_service):
+    def __init__(self, holiday_service: HolidayService):
         self.holiday_service = holiday_service
 
     def get_for_date(self, date: datetime) -> list[DateDimension]:
@@ -28,59 +31,79 @@ class DateDimensionService(object):
         :param date: 完整的日期时间，datetime对象
         :return: DateDimension对象
         """
-        prev_year = date.year - 1
-        prev_month = date.month - 1 if date.month != 1 else 12
-        prev_day = (
-            date.day - 1 if date.day != 1 else date.replace(prev_month).day
+        logger.debug(f"get_for_date_hour: {date}")
+
+        pendulum_date = pendulum.datetime(
+            date.year,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second,
+            tz="Asia/Shanghai",
         )
-        hour = date.hour
+
+        prev_year = pendulum_date.subtract(years=1)
+        prev_month = (
+            (pendulum_date.subtract(months=1))
+            if pendulum_date.month != 1
+            else pendulum_date.end_of("year")
+        )
+        prev_day = (
+            (pendulum_date.subtract(days=1))
+            if pendulum_date.day != 1
+            else prev_month.end_of("month")
+        )
+
+        hour = pendulum_date.hour
 
         # 计算班次
         shift = "夜" if hour < 8 else "早" if hour < 17 else "中"
+
         # 计算假日
-        holiday = self.holiday_service.get_for_date(date)
+        holiday = self.holiday_service.get_for_date(pendulum_date)
 
         return DateDimension(
-            date=date,
-            date_id=date.strftime("%Y%m%d%H"),
-            date_time=date,
-            prev_year_same_date=date.replace(year=prev_year),
-            prev_year_date_id=(date.replace(year=prev_year)).strftime(
-                "%Y%m%d%H"
-            ),
-            prev_year_date_time=date.replace(year=prev_year),
-            year=str(date.year),
-            year_start_date=date.replace(month=1, day=1),
-            prev_year=str(prev_year),
-            prev_year_start_date=date.replace(year=prev_year, month=1, day=1),
-            month=str(date.month),
-            month_start_date=date.replace(day=1),
-            month_end_date=date.replace(month=date.month + 1, day=1)
-            - timedelta(days=1),
-            prev_year_month=str(prev_month),
-            prev_month_start_date=date.replace(
-                year=prev_year, month=prev_month, day=1
-            ),
-            prev_month_end_date=date.replace(
-                year=prev_year, month=prev_month, day=prev_day
-            ),
-            quarter=("Q" + str((date.month - 1) // 3 + 1)),
-            weekday=date.strftime("%u"),
-            week_identifier=date.strftime("%V"),
-            year_quarter=date.strftime("%YQ%q"),
-            day_of_year=date.timetuple().tm_yday,
-            day_of_month=date.day,
-            day_of_week=date.weekday() + 1,  # 星期一为1
-            week_of_month=((date.day - 1) // 7)
-            + 1,  # 当月第几周，星期一为第一周
-            week_of_year=date.isocalendar()[1],  # 当年第几周，星期一为第一周
-            is_weekend="Yes" if date.weekday() >= 5 else "No",
-            date_type=self.__get_date_type(
-                date, holiday
-            ),  # 需要额外逻辑来确定工作日、休息日、节假日
-            holiday_name=holiday.name if holiday else "",  # 计算节假日名称
+            # 日期
+            date_id=pendulum_date.format("YYYYMMDDHH"),
+            date=pendulum.parse(pendulum_date.to_date_string()),
+            date_time=pendulum.parse(pendulum_date.to_datetime_string()),
+            # 年
+            year=str(pendulum_date.year),
+            year_start_date=pendulum_date.start_of("year"),
+            # /季度
+            quarter=f"Q{pendulum_date.quarter}",
+            year_quarter=f"{pendulum_date.year}Q{pendulum_date.quarter}",
+            # /月
+            month=str(pendulum_date.month),
+            month_start_date=pendulum_date.start_of("month"),
+            month_end_date=pendulum_date.end_of("month"),
+            # 周
+            weekday=pendulum_date.format("E"),
+            week_identifier=pendulum_date.format("ddd"),
+            # 第几天
+            day_of_year=pendulum_date.day_of_year,
+            day_of_month=pendulum_date.day,
+            day_of_week=pendulum_date.day_of_week + 1,  # 星期一为1
+            # 第几周
+            week_of_month=pendulum_date.week_of_month,
+            week_of_year=pendulum_date.week_of_year,  # 当年周数，星期一为第一周
+            # 日类型
+            is_weekend="Yes" if pendulum_date.day_of_week >= 5 else "No",
+            date_type=self.__get_date_type(pendulum_date, holiday),
+            holiday_name=holiday.name if holiday else "",
+            # 小时/班次
             hour=hour,
             shift=shift,
+            # 去年日期
+            prev_year_same_date=date.subtract(years=1),
+            prev_year_date_id=prev_year.format("YYYYMMDDHH"),
+            prev_year_date_time=pendulum.parse(prev_year.to_datetime_string()),
+            prev_year=str(prev_year.year),
+            prev_year_start_date=prev_year.start_of("year"),
+            prev_year_month=str(prev_month.month),
+            prev_month_start_date=prev_month.start_of("month"),
+            prev_month_end_date=prev_month.end_of("month"),
         )
 
     def __get_date_type(
