@@ -65,12 +65,14 @@ class DateDimensionService(object):
 
         return DateDimension(
             # 日期
-            date_id=pendulum_date.format("YYYYMMDDHH"),
+            date_id=pendulum_date.format("YYYYMMDD"),
+            date_hour_id=pendulum_date.format("YYYYMMDDHH"),
             date=pendulum.parse(pendulum_date.to_date_string()),
             date_time=pendulum.parse(pendulum_date.to_datetime_string()),
             # 年
             year=str(pendulum_date.year),
             year_start_date=pendulum_date.start_of("year"),
+            year_end_date=pendulum_date.end_of("year"),
             # /季度
             quarter=f"Q{pendulum_date.quarter}",
             year_quarter=f"{pendulum_date.year}Q{pendulum_date.quarter}",
@@ -82,6 +84,7 @@ class DateDimensionService(object):
             weekday=pendulum_date.format("E"),
             week_identifier=pendulum_date.format("ddd"),
             # 第几天
+            day=str(pendulum_date.day),
             day_of_year=pendulum_date.day_of_year,
             day_of_month=pendulum_date.day,
             day_of_week=pendulum_date.day_of_week + 1,  # 星期一为1
@@ -93,17 +96,19 @@ class DateDimensionService(object):
             date_type=self.__get_date_type(pendulum_date, holiday),
             holiday_name=holiday.name if holiday else "",
             # 小时/班次
-            hour=hour,
+            hour=str(hour),
             shift=shift,
             # 去年日期
-            prev_year_same_date=date.subtract(years=1),
-            prev_year_date_id=prev_year.format("YYYYMMDDHH"),
+            prev_year_date=prev_year,
+            prev_year_date_id=prev_year.format("YYYYMMDD"),
             prev_year_date_time=pendulum.parse(prev_year.to_datetime_string()),
-            prev_year=str(prev_year.year),
             prev_year_start_date=prev_year.start_of("year"),
+            prev_year_end_date=prev_year.start_of("year"),
+            prev_year=str(prev_year.year),
             prev_year_month=str(prev_month.month),
             prev_month_start_date=prev_month.start_of("month"),
             prev_month_end_date=prev_month.end_of("month"),
+            prev_year_day=str(prev_year.day),
         )
 
     def __get_date_type(

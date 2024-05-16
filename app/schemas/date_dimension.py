@@ -10,6 +10,9 @@ class DateDimension(BaseModel):
     """
 
     date_id: str = Field(
+        description="日期ID，格式通常为YYYYMMDD，其中HH表示小时"
+    )
+    date_hour_id: str = Field(
         description="日期ID，格式通常为YYYYMMDDHH，其中HH表示小时"
     )
     date: datetime = Field(description="日期，精确到日期的datetime对象")
@@ -18,6 +21,9 @@ class DateDimension(BaseModel):
     year: str = Field(description="当前日期所属的年份，字符串格式")
     year_start_date: datetime = Field(
         description="当年的第一天日期，格式YYYYMMDD"
+    )
+    year_end_date: datetime = Field(
+        description="当年的最后一天日期，格式YYYYMMDD"
     )
 
     quarter: str = Field(description="当前日期所属的季度，字符串格式")
@@ -33,11 +39,12 @@ class DateDimension(BaseModel):
         description="当月的最后一天日期，格式YYYYMMDD"
     )
 
+    day: str = Field(description="当前日期的天")
     day_of_year: int = Field(description="当前日期在当年的第几天，从1开始")
     day_of_month: int = Field(description="当前日期在当月的第几天")
     day_of_week: int = Field(description="当前日期在当周的第几天，星期一为1")
 
-    hour: int = Field(description="当前日期的小时，范围为00-23")
+    hour: str = Field(description="当前日期的小时，范围为00-23")
     shift: str = Field(
         description="班次标识，0-7表示夜班，8-16表示早班，17-23表示中班"
     )
@@ -57,17 +64,21 @@ class DateDimension(BaseModel):
     date_type: str = Field(description="日期类型标识，节假日，工作日，休息日")
     holiday_name: str = Field(description="具体的节假日名称，如果有的话")
 
-    prev_year_same_date: datetime = Field(description="去年同一天的日期")
+    prev_year_date: datetime = Field(description="去年同一天的日期")
     prev_year_date_id: str = Field(
-        description="去年同一天的日期ID，格式YYYYMMDDHH"
+        description="去年同一天的日期ID，格式YYYYMMDD"
     )
     prev_year_date_time: datetime = Field(
         description="去年同一天的完整日期时间"
     )
     prev_year: str = Field(description="去年的年份，字符串格式")
     prev_year_month: str = Field(description="去年同月的月份，字符串格式")
+    prev_year_day: str = Field(description="去年同月的日，字符串格式")
     prev_year_start_date: datetime = Field(
         description="去年的第一天日期，格式YYYYMMDD"
+    )
+    prev_year_end_date: datetime = Field(
+        description="去年的最后一天日期，格式YYYYMMDD"
     )
     prev_month_start_date: datetime = Field(
         description="去年同月的第一天日期，格式YYYYMMDD"
