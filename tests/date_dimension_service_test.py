@@ -35,7 +35,7 @@ def test_get_for_date_normal_workday(date_dim_service):
     expected_week_of_month = ((test_date.day - 1) // 7) + 1
     expected_week_of_year = test_date.isocalendar()[1]
     expected_is_weekend = "No" if test_date.weekday() < 5 else "Yes"
-    expected_hour = test_date.hour
+    expected_hour = str(test_date.hour)
     expected_shift = (
         "早"
         if test_date.hour < 17 and test_date.hour > 8
@@ -49,7 +49,7 @@ def test_get_for_date_normal_workday(date_dim_service):
     assert len(results) == 24
     assert isinstance(result, DateDimension)
     assert result.date == test_date
-    assert result.date_id == expected_date_id
+    assert result.date_hour_id == expected_date_id
     assert result.year == expected_year
     assert result.month == expected_month
     assert result.weekday == expected_weekday
@@ -70,19 +70,19 @@ def test_get_for_date_normal_workday(date_dim_service):
 def test_get_for_date_weekend(date_dim_service):
     test_date = datetime(2024, 4, 7, 12, 0, 0)  # 周末日期时间
 
-    expected_date_id = test_date.strftime("%Y%m%d%H")
+    expected_date_hour_id = test_date.strftime("%Y%m%d%H")
     expected_is_weekend = "Yes"
 
     result = date_dim_service.get_for_date(test_date)[12]
 
     assert result.is_weekend == expected_is_weekend
-    assert result.date_id == expected_date_id
+    assert result.date_hour_id == expected_date_hour_id
 
 
 def test_get_for_date_holiday_is_not_offday(date_dim_service):
     test_date = datetime(2024, 4, 28, 12, 0, 0)  # 公共假期日期时间
 
-    expected_date_id = test_date.strftime("%Y%m%d%H")
+    expected_date_hour_id = test_date.strftime("%Y%m%d%H")
     expected_holiday_name = "劳动节"
     expected_date_type = "工作日"
 
@@ -90,13 +90,13 @@ def test_get_for_date_holiday_is_not_offday(date_dim_service):
 
     assert result.holiday_name == expected_holiday_name
     assert result.date_type == expected_date_type
-    assert result.date_id == expected_date_id
+    assert result.date_hour_id == expected_date_hour_id
 
 
 def test_get_for_date_holiday_is_offday(date_dim_service):
     test_date = datetime(2024, 5, 5, 12, 0, 0)  # 公共假期日期时间
 
-    expected_date_id = test_date.strftime("%Y%m%d%H")
+    expected_date_hour_id = test_date.strftime("%Y%m%d%H")
     expected_holiday_name = "劳动节"
     expected_date_type = "节假日"
 
@@ -104,7 +104,7 @@ def test_get_for_date_holiday_is_offday(date_dim_service):
 
     assert result.holiday_name == expected_holiday_name
     assert result.date_type == expected_date_type
-    assert result.date_id == expected_date_id
+    assert result.date_hour_id == expected_date_hour_id
 
 
 def test_get_for_date_night_shift(date_dim_service):
