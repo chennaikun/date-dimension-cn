@@ -1,5 +1,5 @@
-from typing import Iterator, Optional
-from datetime import datetime, timedelta
+from typing import Iterator, Optional, AsyncGenerator, Generator
+from datetime import datetime, timedelta, time
 import pendulum
 from loguru import logger
 
@@ -12,20 +12,9 @@ class DateDimensionService(object):
     def __init__(self, holiday_service: HolidayService):
         self.holiday_service = holiday_service
 
-    def get_for_date(self, date: datetime) -> list[DateDimension]:
-        """
-        根据给定的完整日期时间返回0~23小时的DateDimension对象列表
-        :param date: 完整的日期时间，datetime对象
-        :return: DateDimension列表
-        """
-        date_dimensions = []
-        for hour in range(24):
-            date_hour = date.replace(hour=hour)
-            date_dimensions.append(self.__get_for_date_hour(date_hour))
-
-        return date_dimensions
-
-    def __get_for_date_hour(self, date: datetime) -> DateDimension:
+    async def __get_for_date_hour(
+        self, date: datetime
+    ) -> DateDimension | None:
         """
         根据给定的完整日期时间返回一个DateDimension对象
         :param date: 完整的日期时间，datetime对象
@@ -49,11 +38,6 @@ class DateDimensionService(object):
             if pendulum_date.month != 1
             else pendulum_date.end_of("year")
         )
-        prev_day = (
-            (pendulum_date.subtract(days=1))
-            if pendulum_date.day != 1
-            else prev_month.end_of("month")
-        )
 
         hour = pendulum_date.hour
 
@@ -61,7 +45,7 @@ class DateDimensionService(object):
         shift = "夜" if hour < 8 else "早" if hour < 17 else "中"
 
         # 计算假日
-        holiday = self.holiday_service.get_for_date(pendulum_date)
+        holiday = await self.holiday_service.get_for_date(pendulum_date)
 
         return DateDimension(
             # 日期
@@ -143,9 +127,9 @@ class DateDimensionService(object):
 
         return date_type
 
-    def get_ste_day(
+    async def get_ste_day(
         self, time_start: datetime, time_end: datetime
-    ) -> list[DateDimension]:
+    ) -> AsyncGenerator[DateDimension, None]:
         """
         根据给定的日期范围，计算并返回每个日期对应的DateDimension对象列表。
 
@@ -156,12 +140,21 @@ class DateDimensionService(object):
         返回值:
         List[DateDimension] - 日期范围内每个日期对应的DateDimension对象列表。
         """
-        date_dimensions = []
         for date in self.__iter_days(time_start, time_end):
-            date_dimension = self.get_for_date(date)
-            date_dimensions.extend(date_dimension)
+            async for d in self.get_for_date(date):
+                yield d
 
-        return date_dimensions
+    async def get_for_date(
+        self, date: datetime
+    ) -> AsyncGenerator[DateDimension, None]:
+        """
+        根据给定的完整日期时间返回0~23小时的DateDimension对象列表
+        :param date: 完整的日期时间，datetime对象
+        :return: DateDimension列表
+        """
+        for hour in range(24):
+            date_hour = datetime.combine(date, time(hour))
+            yield await self.__get_for_date_hour(date_hour)
 
     def __iter_days(
         self, start_date: datetime.date, end_date: datetime.date
